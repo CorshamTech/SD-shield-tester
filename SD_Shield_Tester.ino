@@ -12,7 +12,7 @@
 // Mid-2017 by Bob Applegate K2UT, bob@corshamtech.com
 //
 // v1.2 01/01/2019  Bob Applegate
-//                  Added much better RTC test code
+//                  Added much better RTC test code.  Added more comments.
 
 #include <Arduino.h>
 #include <SD.h>
@@ -60,10 +60,13 @@ bool rtcPresent;
 
 
 //=============================================================================
+// Initialization routine.
+
 void setup()
 {
         Serial.begin(9600);
-        Serial.println("\n\n\nCorsham Tech SD Shield Tester version 1.1");
+        Serial.println("\n\n\nCorsham Tech SD Shield Tester version 1.2");
+        Serial.println("Written by Bob Applegate K2UT, bob@corshamtech.com");
 
         // Find what revision this shield is and set a variable.
         // This value changes what needs to be tested.
@@ -167,6 +170,9 @@ void loop()
 
 
 //=============================================================================
+// Prints the menu of valid commands.  Takes into account which shield version
+// this is.
+
 void printMenu(void)
 {
         Serial.println("");
@@ -211,6 +217,8 @@ void toggleLED(int pin, char *name)
 
 
 //=============================================================================
+// Display whether the SD is installed or not.
+
 void doInstalledTest(void)
 {
         sdPresent = digitalRead(PRESENCE_PIN);
@@ -229,6 +237,8 @@ void doInstalledTest(void)
 
 
 //=============================================================================
+// Displays the current state of each of the option switches.
+
 void doShowOptionSwitches(void)
 {
         Serial.print("Option 1: ");
@@ -318,8 +328,8 @@ void sdAccessTest(void)
 
 
 //=============================================================================
-// Not done yet.  It's not very important anyway since there's really nothing
-// except an I2C interface.
+// The RTC test sets the time/date to a specific value, delays a couple of
+// seconds and verifies the clock is ticking.
 
 void doRtcTest(void)
 {
@@ -367,90 +377,6 @@ void cycleLEDs(void)
         digitalWrite(RED_LED_PIN, LED_ON);
         delay(1000);
         digitalWrite(RED_LED_PIN, LED_OFF);
-}
-
-
-
-
-//=============================================================================
-// Given a pointer to a data area of 8 bytes, this gets the current time and
-// date from the RTC and puts it into the buffer in this order:
-//
-//    MDYYHMSd
-//
-// Example for Jan 1, 2000, 02:59:01
-//
-//    1, 0, 0, 0, 2, 59, 1
-
-bool getClock(byte *ptr)
-{
-        bool ret = false;
-        
-#ifndef FORCE_ERRORS
-        if (rtcPresent)
-        {
-                // go get the time from the hardware.  The low level function takes
-                // parameters in a different order than our buffer needs them, so
-                // re-order the data as needed.
-        
-                readDS3231time(&ptr[6], &ptr[5], &ptr[4], &ptr[7], &ptr[1], &ptr[0], &ptr[3]);
-        }
-        else
-        {
-          Serial.println("RTC not present, sending dummy data");
-                ptr[0] = 0x01;    // Jan
-                ptr[1] = 0x01;    // 1st
-                ptr[2] = 0x00;    // ???
-                ptr[3] = 0x00;    // last two digits of year
-                ptr[4] = 0x00;    // hour
-                ptr[5] = 0x00;    // minute
-                ptr[6] = 0x00;    // second
-                ptr[7] = 0x01;    // day of week
-        }
-
-        ret = true;
-#endif
-        
-        return ret;
-}
-
-
-
-
-//=============================================================================
-// Given a pointer to an 8 character buffer, set the RTC to the specified time
-// and date.  The data in the buffer is in this order:
-//
-//    MDYYHMSd
-
-bool setClock(byte *ptr)
-{
-        bool ret = false;
-
-#ifndef FORCE_ERRORS
-
-          // I removed the check for it being present so that the user can
-          // still force the time to be updated just in case there is an
-          // RTC but it's got a whacky date/time.
-          
-//        if (rtcPresent)
-//        {
-                byte *orig = ptr;
-                Serial.print("set time: ");
-                for (int i = 0; i < 8; i++)
-                {
-                        Serial.print(*ptr++, DEC);
-                        Serial.print(" ");
-                }
-                Serial.println("");
-                ptr = orig;
-
-                setRtcTime(ptr[6], ptr[5], ptr[4], ptr[7], ptr[1], ptr[0], ptr[3]);
-                ret = true;
-//        }
-#endif
-
-        return ret;
 }
 
 
@@ -570,12 +496,19 @@ void setTime(void)
 
 
 //=============================================================================
+// This gets and displays the RTC values in an easy to understand format.  The
+// primary use for this is to get/display the time after the RTC has been set
+// and then power cycled.  Ie, did the battery keep the clock ticking.
+
 void getTime(void)
 {
         byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
 
+        // Get the values from the RTC...
+        
         readDS3231time(&second, &minute, &hour, &dayOfWeek,
             &dayOfMonth, &month, &year);
+
         Serial.print("Date: ");
         Serial.print(month);
         Serial.print("/");
@@ -583,6 +516,8 @@ void getTime(void)
         Serial.print("/");
         Serial.println(2000 + year);
 
+        // Print the day of the week as a day, not number.
+        
         Serial.print("Day of week: ");
         switch (dayOfWeek)
         {
@@ -615,6 +550,9 @@ void getTime(void)
                         break;
         }
 
+        // Not perfect; displays small values as single digits.
+        // Oh, to have a real printf funcion...
+        
         Serial.print("Time: ");
         Serial.print(hour);
         Serial.print(":");
