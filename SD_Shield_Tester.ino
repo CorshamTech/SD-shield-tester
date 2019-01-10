@@ -96,9 +96,7 @@ void setup()
         
         pinMode(GREEN_LED_PIN, OUTPUT);
         digitalWrite(GREEN_LED_PIN, LED_OFF);
-        digitalWrite(YELLOW_LED_PIN, LED_OFF);
-        digitalWrite(RED_LED_PIN, LED_OFF);
-        
+
         // Configure new output pins
         pinMode(TIMER_OUT_PIN, OUTPUT);
 
@@ -339,19 +337,33 @@ void doRtcTest(void)
         
         setRtcTime(1, 1, 1, 1, 1, 1, 19);
 
-        delay(2500);    // delay just over two seconds
-
+        // Make sure the time just set was actually set.  I've had
+        // chips always return the same value when not running.
+        
         readDS3231time(&second, &minute, &hour, &dayOfWeek,
-            &dayOfMonth, &month, &year);
-
-        if (second >= 3)
+                &dayOfMonth, &month, &year);
+        if (minute != 1 || hour != 1)
         {
-                Serial.println("RTC is ticking - passed");
+                Serial.println("Clock didn't take value; seems bad");
         }
         else
         {
-                Serial.println("Clock didn't seem to tick, but try again.");
-                Serial.println(second);
+                delay(2500);    // delay just over two seconds
+
+                readDS3231time(&second, &minute, &hour, &dayOfWeek,
+                        &dayOfMonth, &month, &year);
+                //Serial.print("Read seconds: ");
+                //Serial.println(second);
+        
+                if (second >= 3)
+                {
+                        Serial.println("RTC is ticking - passed");
+                }
+                else
+                {
+                        Serial.println("Clock didn't seem to tick, but try again.");
+                        Serial.println(second);
+                }
         }
 }
 
