@@ -13,6 +13,8 @@
 //
 // v1.2 01/01/2019  Bob Applegate
 //                  Added much better RTC test code.  Added more comments.
+// v1.3 03/23/2020  Bob Applegate
+//                  Lots of little changes and fixes.
 
 #include <Arduino.h>
 #include <SD.h>
@@ -65,7 +67,7 @@ bool rtcPresent;
 void setup()
 {
         Serial.begin(9600);
-        Serial.println("\n\n\nCorsham Tech SD Shield Tester version 1.2");
+        Serial.println("\n\n\nCorsham Tech SD Shield Tester version 1.3");
         Serial.println("Written by Bob Applegate K2UT, bob@corshamtech.com");
 
         // Find what revision this shield is and set a variable.
@@ -193,28 +195,6 @@ void printMenu(void)
 
 
 //=============================================================================
-// Given an LED pin number and name, toggle the state and display the
-// new state.
-
-void toggleLED(int pin, char *name)
-{
-        Serial.print(name);
-        if (digitalRead(pin))
-        {
-                Serial.println(" LED is now on");
-                digitalWrite(pin, LED_ON);
-        }
-        else
-        {
-                Serial.println(" LED is now off");
-                digitalWrite(pin, LED_OFF);
-        }
-}
-
-
-
-
-//=============================================================================
 // Display whether the SD is installed or not.
 
 void doInstalledTest(void)
@@ -331,9 +311,28 @@ void sdAccessTest(void)
 
 void doRtcTest(void)
 {
-        byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
+        byte second, minute, hour, dayOfWeek, dayOfMonth, month, year, second2;
 
         Serial.print("Testing the RTC... ");
+
+        // Just in case the clock is already set and running, grab the
+        // current time, delay a bit and see if it's ticking...
+        
+        readDS3231time(&second, &minute, &hour, &dayOfWeek,
+                &dayOfMonth, &month, &year);
+        delay(2000);
+        readDS3231time(&second2, &minute, &hour, &dayOfWeek,
+                &dayOfMonth, &month, &year);
+        if (second != second2)
+        {
+                Serial.println("RTC was already set and is ticking - passed");
+                return;
+        }
+
+        // Clock might not be ticking, so let's set the time which
+        // will start the clock.
+
+        Serial.println("clock wasn't set already, trying to set it now...");
         
         setRtcTime(1, 1, 1, 1, 1, 1, 19);
 
@@ -479,7 +478,7 @@ void setTime(void)
         Serial.print("\nEnter last two digits of year: ");
         year = Serial.parseInt();
 
-        Serial.print("\nEnter day of week, 0 = Sunday, 1 = Monday, 2 = Tuesday, etc: ");
+        Serial.print("\nEnter day of week, 1 = Sunday, 2 = Monday, 3 = Tuesday, etc: ");
         dayOfWeek = Serial.parseInt();
 
         Serial.print("\nEnter hour: ");
@@ -533,32 +532,32 @@ void getTime(void)
         Serial.print("Day of week: ");
         switch (dayOfWeek)
         {
-                case 0:
-                        Serial.println("Sunday (0)");
-                        break;
-
                 case 1:
-                        Serial.println("Monday (1)");
+                        Serial.println("Sunday (1)");
                         break;
 
                 case 2:
-                        Serial.println("Tuesday (2)");
+                        Serial.println("Monday (2)");
                         break;
 
                 case 3:
-                        Serial.println("Wednesday (3)");
+                        Serial.println("Tuesday (3)");
                         break;
 
                 case 4:
-                        Serial.println("Thursday (4)");
+                        Serial.println("Wednesday (4)");
                         break;
 
                 case 5:
-                        Serial.println("Friday (5)");
+                        Serial.println("Thursday (5)");
                         break;
 
                 case 6:
-                        Serial.println("Saturday (6)");
+                        Serial.println("Friday (6)");
+                        break;
+
+                case 7:
+                        Serial.println("Saturday (7)");
                         break;
         }
 
@@ -572,5 +571,3 @@ void getTime(void)
         Serial.print(":");
         Serial.println(second);
 }
-
-
